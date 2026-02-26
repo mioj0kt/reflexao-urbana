@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senda do Ser | Oráculo Urbano</title>
+    <style>
+        :root { --bg: #0a0a0a; --text: #e0e0e0; --accent: #ffffff; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Georgia', serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 85%;
+            padding: 20px;
+            animation: fadeIn 1.5s ease-in;
+        }
+
+        #mensagem {
+            font-size: 2.2rem;
+            font-style: italic;
+            line-height: 1.4;
+            margin-bottom: 30px;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .decor {
+            height: 1px; width: 60px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            margin: 0 auto;
+        }
+
+        /* BOTÃO DE REFRESH - CANTO SUPERIOR ESQUERDO */
+        #btn-refresh {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: transparent;
+            color: var(--text);
+            border: 1px solid #333;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            opacity: 0.3;
+            z-index: 100;
+            outline: none;
+        }
+
+        #btn-refresh:hover {
+            opacity: 1;
+            border-color: var(--accent);
+            transform: rotate(-45deg);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="btn-refresh" onclick="location.reload()" title="Nova Reflexão">↻</button>
+
+    <div class="container">
+        <div id="mensagem">Contemplando...</div>
+        <div class="decor"></div>
+    </div>
+
+    <script>
+        // Chave codificada
+        const secret = "Z3NrXzNiRE85MlVOUFYxYzdUb1gxUGxzV0dkeWIzRllXelBEVG44eGcyUnZqSWpiV3VDUzVWYnc="; 
+        const output = document.getElementById('mensagem');
+
+        const reserva = [
+            "Você é o silêncio que observa o barulho.",
+            "Supere a ilusão de que você é apenas seus pensamentos.",
+            "Você habita o agora, o resto é memória ou sonho.",
+            "Supere o medo de ser quem você realmente é.",
+            "Você é a luz que projeta as próprias sombras."
+        ];
+
+        async function oraculo() {
+            let estoque = JSON.parse(localStorage.getItem('estoque_filo_v1') || "[]");
+
+            // Exibe a frase do estoque ou da reserva instantaneamente
+            if (estoque.length > 0) {
+                output.innerText = estoque.shift();
+                localStorage.setItem('estoque_filo_v1', JSON.stringify(estoque));
+            } else {
+                output.innerText = reserva[Math.floor(Math.random() * reserva.length)];
+            }
+
+            // Abastece o estoque em silêncio se estiver acabando
+            if (estoque.length < 5) {
+                abastecerEstoque();
+            }
+        }
+
+        async function abastecerEstoque() {
+            try {
+                // Decodifica a chave apenas na memória RAM durante a execução
+                const KEY = atob(secret); 
+                
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.1-8b-instant",
+                        messages: [{
+                            role: "system", 
+                            content: "gere 10 frases curtas (máximo 15 palavras) profundas e impactantes em português começando com 'Você' ou 'Supere'. Separe apenas por ponto e vírgula (;). Sem números."
+                        }],
+                        temperature: 0.8
+                    })
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const texto = data.choices[0].message.content;
+                const novasFrases = texto.split(';').map(f => f.trim()).filter(f => f.length > 10);
+
+                let estoqueAtual = JSON.parse(localStorage.getItem('estoque_filo_v1') || "[]");
+                const novoEstoque = [...new Set([...estoqueAtual, ...novasFrases])].slice(0, 30);
+
+                localStorage.setItem('estoque_filo_v1', JSON.stringify(novoEstoque));
+            } catch (error) {
+                console.warn("API offline.");
+            }
+        }
+
+        // Inicia o processo
+        oraculo();
+    </script>
+</body>
+</html>
